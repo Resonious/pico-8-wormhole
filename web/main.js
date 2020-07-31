@@ -132,6 +132,9 @@ const triggerDownload = receiving => {
 // NIGEL keep track of received values and don't send changes to them
 let receivedChangeMask = new Uint32Array(4);
 
+// NIGEL reserved indices
+const indexIsReserved = index => index === 127
+
 // NIGEL Try to send every tick..scary
 const oldP8Run = window.p8_run_cart
 p8_run_cart = () => {
@@ -157,12 +160,14 @@ p8_run_cart = () => {
       toSendIndex = 0
       for (let b = 0; b < 4; ++b) {
         for (let i = 0; i < 32; ++i) {
+          const gpioIndex = i+b*32
           if (
-            window.pico8_gpio[i+b*32] !== previousGpio[i+b*32] &&
+            !indexIsReserved(gpioIndex) && // Reserved for player number
+            window.pico8_gpio[gpioIndex] !== previousGpio[gpioIndex] &&
             !(receivedChangeMask[b] & (1 << i))
           ) {
             changed[b] |= (changed | (1 << i))
-            values[toSendIndex++] = window.pico8_gpio[i+b*32]
+            values[toSendIndex++] = window.pico8_gpio[gpioIndex]
           }
         }
       }
@@ -216,8 +221,9 @@ const picoReceive = e => {
   let valueIndex = 0
   for (let b = 0; b < 4; ++b) {
     for (let i = 0; i < 32; ++i) {
-      if (changed[b] & (1 << i)) {
-        window.pico8_gpio[i+b*32] = values[valueIndex++]
+      const gpioIndex = i+b*32
+      if (!indexIsReserved(gpioIndex) && (changed[b] & (1 << i))) {
+        window.pico8_gpio[gpioIndex] = values[valueIndex++]
       }
     }
   }
@@ -353,6 +359,10 @@ const connect = async e => {
     if (document.getElementById('magiccode').value === '') {
       dialling()
       document.getElementById('info').innerHTML = 'WAITING FOR THE OTHER SIDE - SHARE CODE OR URL'
+
+      // NIGEL make user player 1
+      window.pico8_gpio[127] = 0
+
       const [code, finish] = await newwormhole(signalserver.href, initPeerConnection)
       document.getElementById('magiccode').value = code
       codechange()
@@ -368,6 +378,10 @@ const connect = async e => {
     } else {
       dialling()
       document.getElementById('info').innerHTML = 'CONNECTING'
+
+      // NIGEL make user player 2
+      window.pico8_gpio[127] = 1
+
       await dial(signalserver.href, document.getElementById('magiccode').value, initPeerConnection)
     }
   } catch (err) {
@@ -400,7 +414,7 @@ const connected = () => {
   document.body.classList.remove('disconnected')
 
 
-  document.getElementById('info').innerHTML = 'OR DRAG FILES TO SEND'
+  document.getElementById('info').innerHTML = 'READY TO RUMBLE'
 
   location.hash = ''
 }

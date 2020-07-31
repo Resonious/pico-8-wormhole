@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <meta charset=utf-8>
+  <meta name="description" content="DEGICA OPEN HACK 2020-07!!!">
+  <meta name="viewport" content="width=device-width, height=device-height">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="wasm_exec.js"></script>
+  <script type="module" src="main.js"></script>
+  <title>Pico-8 Networking?</title>
+  <body>
+    <script>
+      window.pico8_gpio = Array(128);
+    </script>
+
+
+    <form id="dialog" role="main">
+      <div>
+        <label id="filepicker-wrap" class="button">OPEN<input type="file" id="filepicker" disabled></label>
+        <p id="info">Let's see how this goes...</p></div>
+      <ul id="transfers"></ul>
+      <img id="qr">
+      <input type="submit" id="dial" class="button" value="LOADING..." disabled>
+      <input type="text" id="magiccode" autocomplete="off" autofocus title="WORMHOLE CODE" placeholder="GOT A CODE? TYPE HERE">
+      <span id="autocomplete">&nbsp;</span>
+    </form>
+  </body>
+</html>

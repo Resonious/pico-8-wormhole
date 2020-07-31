@@ -129,6 +129,11 @@ const triggerDownload = receiving => {
   }
 }
 
+const picoReceive = e => {
+  const msg = e.data;
+  console.log("RECEIVE!\n", msg);
+}
+
 // receive is the new message handler.
 //
 // This function cannot be async without carefully thinking through the
@@ -236,7 +241,8 @@ const initPeerConnection = (iceServers) => {
   }
   datachannel = pc.createDataChannel('data', { negotiated: true, id: 0 })
   datachannel.onopen = connected
-  datachannel.onmessage = receive
+  //datachannel.onmessage = receive
+  datachannel.onmessage = picoReceive
   datachannel.binaryType = 'arraybuffer'
   datachannel.onclose = e => {
     disconnected()
@@ -347,6 +353,9 @@ const codechange = e => {
 }
 
 const browserhacks = () => {
+  // NIGEL I don't need serviceworker for pico8 thing
+  hacks.nosw = true
+
   // Detect for features we need for this to work.
   if (!(window.WebSocket) ||
       !(window.RTCPeerConnection) ||

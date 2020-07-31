@@ -1,21 +1,24 @@
 <script>
-  const changed = new Uint32Array(4);
-  const previousGpio = new Uint8Array(128);
+  (() => {
+    const buffer = new ArrayBuffer(128 + 4*4);
+    const changed = new Uint32Array(buffer, 0, 4);
+    const previousGpio = new Uint8Array(buffer, 4*4, 128);
 
-  setInterval(() => {
-    window.pico8_gpio
+    setInterval(() => {
+      window.pico8_gpio
 
-    // Compute diff bitmask
-    for (let b = 0; b < 4; ++b)
-      for (let i = 0; i < 32; ++i)
-        if (window.pico8_gpio[i+b*32] !== previousGpio[i+b*32])
-          changed[b] = changed | (1 << i)
+      // Compute diff bitmask
+      for (let b = 0; b < 4; ++b)
+        for (let i = 0; i < 32; ++i)
+          if (window.pico8_gpio[i+b*32] !== previousGpio[i+b*32])
+            changed[b] = changed | (1 << i)
 
-    // Show the diff if any
-    if (changed.find(x => x !== 0) !== undefined)
-      console.log(window.pico8_gpio);
+      // Show the diff if any
+      if (changed.find(x => x !== 0) !== undefined)
+        console.log(window.pico8_gpio);
 
-    changed.set([0, 0, 0, 0])
-    previousGpio.set(window.pico8_gpio)
-  }, 1000)
+      changed.set([0, 0, 0, 0])
+      previousGpio.set(window.pico8_gpio)
+    }, 1000)
+  })()
 </script>

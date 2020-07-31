@@ -860,8 +860,6 @@ canvas{
     const previousGpio = new Uint8Array(buffer, 4*4, 128);
 
     setInterval(() => {
-      window.pico8_gpio
-
       // Compute diff bitmask
       for (let b = 0; b < 4; ++b)
         for (let i = 0; i < 32; ++i)

@@ -1,6 +1,6 @@
 # What is this
 
-Modified version of the original (https://github.com/saljam/webwormhole)[webwormhole] that instead of sending files, synchronizes the GPIO memory of 2 pico-8 browser carts.
+Modified version of the original [https://github.com/saljam/webwormhole](webwormhole) that instead of sending files, synchronizes the GPIO memory of 2 pico-8 browser carts.
 
 # Original README
 

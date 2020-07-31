@@ -52,6 +52,7 @@ class DataChannelWriter {
   }
 }
 
+// TODO NIGEL Use this for SEND reference
 const send = async f => {
   if (sending) {
     console.log("haven't finished sending", sending.name)
@@ -146,6 +147,7 @@ const triggerDownload = receiving => {
 //
 // This function cannot be async without carefully thinking through the
 // order of messages coming in.
+// TODO NIGEL okay here is RECEIVE
 const receive = e => {
   if (!receiving) {
     receiving = JSON.parse(new TextDecoder('utf8').decode(e.data))

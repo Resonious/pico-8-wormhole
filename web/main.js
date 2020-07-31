@@ -189,7 +189,7 @@ p8_run_cart = () => {
     // Hook into pico-8 frame function to sync gpio every frame
     const mainRunner = Browser.mainLoop.runner
     let nextFrameToSyncOn = 0
-    const syncEvery = 5
+    const syncEvery = 1
     Browser.mainLoop.runner = function() {
       mainRunner(...arguments)
       if (pico8_state.frame_number > nextFrameToSyncOn) {

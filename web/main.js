@@ -8,20 +8,6 @@ let serviceworker
 let signalserver = new URL(location.href)
 const hacks = {}
 
-const pick = e => {
-  const files = document.getElementById('filepicker').files
-  for (let i = 0; i < files.length; i++) {
-    send(files[i])
-  }
-}
-
-const drop = e => {
-  const files = e.dataTransfer.files
-  for (let i = 0; i < files.length; i++) {
-    send(files[i])
-  }
-}
-
 class DataChannelWriter {
   constructor (dc) {
     this.dc = dc
@@ -309,7 +295,6 @@ const dialling = () => {
 
   document.getElementById('dial').disabled = true
   document.getElementById('magiccode').readOnly = true
-  document.getElementById('filepicker').disabled = true
 }
 
 const connected = () => {
@@ -317,12 +302,6 @@ const connected = () => {
   document.body.classList.add('connected')
   document.body.classList.remove('disconnected')
 
-  document.body.addEventListener('drop', drop)
-  document.body.addEventListener('dragenter', highlight)
-  document.body.addEventListener('dragover', highlight)
-  document.body.addEventListener('drop', unhighlight)
-  document.body.addEventListener('dragleave', unhighlight)
-  document.getElementById('filepicker').disabled = false
 
   document.getElementById('info').innerHTML = 'OR DRAG FILES TO SEND'
 
@@ -338,25 +317,10 @@ const disconnected = () => {
   document.getElementById('magiccode').readOnly = false
   document.getElementById('magiccode').value = ''
   codechange()
-  document.getElementById('filepicker').disabled = true
-
-  document.body.removeEventListener('drop', drop)
-  document.body.removeEventListener('dragenter', highlight)
-  document.body.removeEventListener('dragover', highlight)
-  document.body.removeEventListener('drop', unhighlight)
-  document.body.removeEventListener('dragleave', unhighlight)
 
   location.hash = ''
 
   if (serviceworker && receiving) { serviceworker.postMessage({ id: receiving.id, type: 'error', error: 'rtc disconnected' }) }
-}
-
-const highlight = e => {
-  document.body.classList.add('highlight')
-}
-
-const unhighlight = e => {
-  document.body.classList.remove('highlight')
 }
 
 const preventdefault = e => {
@@ -376,9 +340,9 @@ const hashchange = e => {
 
 const codechange = e => {
   if (document.getElementById('magiccode').value === '') {
-    document.getElementById('dial').value = 'NEW WORMHOLE'
+    document.getElementById('dial').value = 'HOST'
   } else {
-    document.getElementById('dial').value = 'JOIN WORMHOLE'
+    document.getElementById('dial').value = 'JOIN'
   }
 }
 
@@ -501,13 +465,10 @@ const wasmready = async () => {
   window.addEventListener('hashchange', hashchange)
   document.getElementById('magiccode').addEventListener('input', codechange)
   document.getElementById('magiccode').addEventListener('keydown', autocomplete)
-  document.getElementById('filepicker').addEventListener('change', pick)
   document.getElementById('dialog').addEventListener('submit', preventdefault)
   document.getElementById('dialog').addEventListener('submit', connect)
-  document.body.addEventListener('drop', preventdefault)
   document.body.addEventListener('dragenter', preventdefault)
   document.body.addEventListener('dragover', preventdefault)
-  document.body.addEventListener('drop', preventdefault)
   document.body.addEventListener('dragleave', preventdefault)
 
   if (location.hash.substring(1) !== '') {

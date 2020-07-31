@@ -6,7 +6,7 @@ let sending
 let datachannel
 let serviceworker
 let signalserver = new URL(location.href)
-const hacks = {}
+window.hacks = {}
 
 class DataChannelWriter {
   constructor (dc) {
@@ -129,9 +129,100 @@ const triggerDownload = receiving => {
   }
 }
 
+// NIGEL keep track of received values and don't send changes to them
+let receivedChangeMask = new Uint32Array(4);
+
+// NIGEL Try to send every tick..scary
+const oldP8Run = window.p8_run_cart
+p8_run_cart = () => {
+  // Run original run script... and put it back
+  const result = oldP8Run()
+  window.p8_run_cart = oldP8Run
+
+  setTimeout(() => {
+    // This buffer will be the whole message
+    const buffer = new ArrayBuffer(128 + 4*4)
+    const changed = new Uint32Array(buffer, 0, 4)
+    const values = new Uint8Array(buffer, 4*4, 128)
+    let toSendIndex = 0
+
+    const previousGpio = new Uint8Array(128)
+
+    // This will be run every frame to detect and send any
+    // changes to gpio
+    const networkSync = () => {
+      if (!datachannel) return;
+
+      // Compute diff bitmask and populate values
+      toSendIndex = 0
+      for (let b = 0; b < 4; ++b) {
+        for (let i = 0; i < 32; ++i) {
+          if (
+            window.pico8_gpio[i+b*32] !== previousGpio[i+b*32] &&
+            !(receivedChangeMask[b] & (1 << i))
+          ) {
+            changed[b] |= (changed | (1 << i))
+            values[toSendIndex++] = window.pico8_gpio[i+b*32]
+          }
+        }
+      }
+
+      // Show/send the diff if any
+      if (changed.find(x => x !== 0) !== undefined) {
+        if (hacks.debug)
+          console.log("Sending!\n", changed, values)
+
+        const message = new DataView(buffer, 0, 4*4 + toSendIndex)
+        try {
+          datachannel.send(message)
+        }
+        catch (e) {
+          console.error(e)
+        }
+      }
+
+      changed.set([0, 0, 0, 0])
+      receivedChangeMask.set([0, 0, 0, 0])
+      previousGpio.set(window.pico8_gpio)
+    }
+
+    // Hook into pico-8 frame function to sync gpio every frame
+    const mainRunner = Browser.mainLoop.runner
+    let nextFrameToSyncOn = 0
+    const syncEvery = 5
+    Browser.mainLoop.runner = function() {
+      mainRunner(...arguments)
+      if (pico8_state.frame_number > nextFrameToSyncOn) {
+        networkSync()
+        nextFrameToSyncOn = pico8_state.frame_number + syncEvery
+      }
+    }
+
+    // Done hacking into pico-8 runtime...
+    console.log('NETWORK SYNC SET UP!')
+  }, 5000) // end setTimeout
+
+  // Return original pico-8 init result
+  return result
+}
+
 const picoReceive = e => {
-  const msg = e.data;
-  console.log("RECEIVE!\n", msg);
+  const buffer = e.data;
+  const changed = new Uint32Array(buffer, 0, 4)
+  const values = new Uint8Array(buffer, 4*4)
+  if (hacks.debug)
+    console.log("RECEIVE!\n\n", changed, values);
+
+  let valueIndex = 0
+  for (let b = 0; b < 4; ++b) {
+    for (let i = 0; i < 32; ++i) {
+      if (changed[b] & (1 << i)) {
+        window.pico8_gpio[i+b*32] = values[valueIndex++]
+      }
+    }
+  }
+
+  receivedChangeMask.set(changed)
 }
 
 // receive is the new message handler.

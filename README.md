@@ -1,3 +1,9 @@
+# What is this
+
+Modified version of the original (https://github.com/saljam/webwormhole)[webwormhole] that instead of sending files, synchronizes the GPIO memory of 2 pico-8 browser carts.
+
+# Original README
+
 THIS PROJECT IS STILL IN EARLY DEVELOPMENT, IT USES EXPERIMENTAL
 CRYPTOGRAPHIC LIBRARIES, AND IT HAS NOT HAD ANY KIND OF SECURITY
 OR CRYPTOGRAPHY REVIEWS. BEWARE THIS MIGHT BE BROKEN AND UNSAFE.

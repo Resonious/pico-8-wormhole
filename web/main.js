@@ -5,7 +5,7 @@ let receiving
 let sending
 let datachannel
 let serviceworker
-let signalserver = new URL(location.href)
+let signalserver = new URL('https://webwormhole.io/')
 window.hacks = {}
 
 class DataChannelWriter {
@@ -368,7 +368,7 @@ const connect = async e => {
       codechange()
       location.hash = code
       signalserver.hash = code
-      const qr = util.qrencode(signalserver.href)
+      const qr = util.qrencode(location.href)
       if (qr === null) {
         document.getElementById('qr').src = ''
       } else {

@@ -441,7 +441,9 @@ const preventdefault = e => {
 
 const hashchange = e => {
   const newhash = location.hash.substring(1)
-  if (newhash !== '' && newhash !== document.getElementById('magiccode').value) {
+  if (newhash !== '' &&
+      newhash !== 'playing' &&
+      newhash !== document.getElementById('magiccode').value) {
     console.log('hash changed dialling new code')
     document.getElementById('magiccode').value = newhash
     codechange()

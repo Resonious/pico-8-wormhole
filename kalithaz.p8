@@ -156,6 +156,19 @@ function simple_⬅️➡️(g)
  end
 end
 
+function cam_follow(g)
+ local █ = g.who.box
+ local ◆ = {
+  x = █.x + g.x + (█.w/2) - 64,
+  y = █.y + g.y + (█.h/2) - 86
+ }
+ 
+ if ◆.x < 0 then ◆.x = 0 end
+ if ◆.y < 0 then ◆.y = 0 end
+ 
+ camera(◆.x, ◆.y)
+end
+
 -- update position if it strays
 -- too far from net position
 function net_adjust(g)
@@ -225,13 +238,15 @@ function update_guy(g)
   g.p_state = g.state
  end
  
- -- gpio write
+ -- gpio write & camera
  if g:isme() then
 	 local a = my_plr_addr()
 	 poke4(a.x, g.x)
 	 poke4(a.y, g.y)
 	 poke(a.go, g.go)
 	 poke(a.state, g.state)
+	 
+	 cam_follow(g)
  end
 end
 

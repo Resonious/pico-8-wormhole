@@ -11,16 +11,20 @@ __lua__
 
 -- math
 
-function to_zero(n, ∧)
- if n > 0 then
+function to(◆, n, ∧)
+ if n > ◆ then
   n = n - ∧
-  if n < 0 then n = 0 end
- elseif n < 0 then
+  if n < ◆ then n = ◆ end
+ elseif n < ◆ then
   n = n + ∧
-  if n > 0 then n = 0 end
+  if n > ◆ then n = ◆ end
  end
  
  return n
+end
+
+function to_zero(n, ∧)
+ return to(0, n, ∧)
 end
 
 
@@ -56,6 +60,11 @@ addr = {}
 addr.p1 = alloc_plr()
 addr.p2 = alloc_plr()
 
+function plr_addr(n)
+ return n == 0
+        and addr.p1
+        or addr.p2
+end
 function my_plr_addr()
  return @myplr == 0
         and addr.p1
@@ -98,6 +107,11 @@ term_vel_y = 4.0
 -- factories..
 
 function make_guy(who, plr)
+ -- initialize shared mem
+ local a = plr_addr(plr)
+ poke(a.go, 1) -- dangerous maybe
+
+ -- construct table
  return {
 		who=who,
 		plr=plr,
@@ -145,10 +159,14 @@ end
 -- update position if it strays
 -- too far from net position
 function net_adjust(g)
- if g.state == sm.idle then
-  g.x = g.net_x
-  g.y = g.net_y
- end
+ local x∧ = abs(g.net_x - g.x)
+           / 30.0
+           + 0.1
+ local y∧ = abs(g.net_y - g.y)
+           / 30.0
+           + 0.1
+ g.x = to(g.net_x, g.x, x∧)
+ g.y = to(g.net_y, g.y, y∧)
 end
 
 -- main guy update function for

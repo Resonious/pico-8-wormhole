@@ -102,7 +102,7 @@ function make_guy(who, plr)
 		who=who,
 		plr=plr,
 		
-		go=0,
+		go=1,
 		left=false,
 		
   x=20, y=20,
@@ -124,7 +124,7 @@ end
 -- logic
 
 function simple_⬅️➡️(g)
- g.go = 0
+ g.go = 1
 
  if btn(0) then
   g.go = g.go - 1
@@ -165,10 +165,11 @@ function update_guy(g)
  end
 
  -- handle speed
- if g.go == 0 then
+ if g.go == 1 then
   g.dx = to_zero(g.dx, 0.3)
  else
-	 g.dx = g.dx + (g.go * 0.6)
+  local go = g.go - 1
+	 g.dx = g.dx + (go * 0.6)
 	end
  
  if g.dy > term_vel_y then
@@ -190,11 +191,11 @@ function update_guy(g)
  end
  
  -- animation
- if g.go == 0 then
+ if g.go == 1 then
   g.state = sm.idle
  else
   g.state = sm.walk
-  g.left = g.go < 0
+  g.left = g.go < 1
  end
  
  -- state machine

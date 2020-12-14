@@ -76,7 +76,7 @@ guys = {
   start_spr = 32,
   box = {x=5,y=1,w=5,h=15}
  },
- kuzuno = {
+ kuzu = {
   start_spr = 64,
   box = {x=6,y=3,w=4,h=13}
  },
@@ -145,10 +145,8 @@ end
 -- update position if it strays
 -- too far from net position
 function net_adjust(g)
- if abs(g.x - g.net_x) > 3 then
+ if g.state == sm.idle then
   g.x = g.net_x
- end
- if abs(g.y - g.net_y) > 3 then
   g.y = g.net_y
  end
 end

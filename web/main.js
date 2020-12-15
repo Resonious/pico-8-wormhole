@@ -413,7 +413,6 @@ const connected = () => {
   document.body.classList.add('connected')
   document.body.classList.remove('disconnected')
 
-
   document.getElementById('info').innerHTML = 'READY TO RUMBLE'
 
   location.hash = ''

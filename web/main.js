@@ -133,10 +133,13 @@ const triggerDownload = receiving => {
 let receivedChangeMask = new Uint32Array(4);
 
 // NIGEL reserved indices
-const indexIsReserved = index => index === 127
+const indexIsReserved = index => index === 127;
+
+// NIGEL full sync flag
+let fullSync = false;
 
 // NIGEL Try to send every tick..scary
-const oldP8Run = window.p8_run_cart
+const oldP8Run = window.p8_run_cart;
 p8_run_cart = () => {
   // Run original run script... and put it back
   const result = oldP8Run()
@@ -161,11 +164,16 @@ p8_run_cart = () => {
       for (let b = 0; b < 4; ++b) {
         for (let i = 0; i < 32; ++i) {
           const gpioIndex = i+b*32
-          if (
-            !indexIsReserved(gpioIndex) && // Reserved for player number
+          // Never send reserved indices
+          if (indexIsReserved(gpioIndex)) continue;
+
+          // See if this gpio was changed
+          const wasChanged = () =>
             window.pico8_gpio[gpioIndex] !== previousGpio[gpioIndex] &&
-            !(receivedChangeMask[b] & (1 << i))
-          ) {
+            !(receivedChangeMask[b] & (1 << i));
+
+          // Add to buffer if changed or doing a fullSync
+          if (fullSync || wasChanged()) {
             changed[b] |= (changed | (1 << i))
             values[toSendIndex++] = window.pico8_gpio[gpioIndex]
           }
@@ -189,6 +197,7 @@ p8_run_cart = () => {
       changed.set([0, 0, 0, 0])
       receivedChangeMask.set([0, 0, 0, 0])
       previousGpio.set(window.pico8_gpio)
+      fullSync = false;
     }
 
     // Hook into pico-8 frame function to sync gpio every frame
@@ -414,6 +423,11 @@ const connected = () => {
   document.body.classList.remove('disconnected')
 
   document.getElementById('info').innerHTML = 'READY TO RUMBLE'
+
+  // NIGEL Send everything to new peer if hosting
+  if (window.pico8_gpio[127] == 0) {
+    fullSync = true;
+  }
 
   location.hash = ''
 }

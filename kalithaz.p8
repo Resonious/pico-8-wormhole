@@ -63,6 +63,19 @@ addr = {}
 addr.p1 = alloc_plr()
 addr.p2 = alloc_plr()
 
+-- box data
+addr.boxid = alloc(1)
+addr.boxes = {}
+nboxes = 6 -- dunno good value
+for i = 1,nboxes do
+ addr.boxes[i] = {
+  id    = alloc(1),
+  x     = alloc(1),
+  state = alloc(1)
+ }
+end
+
+
 function plr_addr(n)
  return n == 0
         and addr.p1
@@ -141,6 +154,36 @@ function make_guy(plr)
    return @myplr == ★.plr
   end
  }
+end
+
+function make_box(x)
+ -- todo multiple types, hp, etc
+ local id = @addr.boxid
+ id = id + 1
+
+ local box = {
+  id=id,
+ 
+  x=x, y=5,
+  dx=0,dy=1,
+  
+  w=16,h=16,
+  
+  dirty=false,
+  
+  collide = function(★, d, g)
+   if d == '⬅️' then
+    ★.dx = -2
+   elseif d == '➡️' then
+    ★.dx = 2
+   end
+  end
+ }
+ 
+ boxes[id] = box
+ -- todo dirty it?
+ 
+ poke(addr.boxid, id)
 end
 
 
@@ -261,13 +304,34 @@ function update_guy(g)
  end
 end
 
+function update_box(b)
+ if b.dy > term_vel_y then
+  b.dy = term_vel_y
+ end
+ b.dx = to_zero(b.dx, 1.1)
+ 
+ b.x = b.x + b.dx
+ b.y = b.y + b.dy 
+end
+
 
 -- game state
 
---p1 = make_guy(guys.elimon, 0)
---p2 = make_guy(guys.cenn, 1)
 p1 = {}
 p2 = {}
+
+boxes = {}
+
+
+-- debug
+function tempguys()
+ poke(plr_addr(0).who_i, 1)
+ poke(plr_addr(1).who_i, 2)
+ p1 = make_guy(0)
+ p2 = make_guy(1)
+ charsel = false
+end
+
 
 -- drawing
 
@@ -311,6 +375,9 @@ function _draw()
  draw_guy(p2)
 end
 
+
+local temptimer = 0
+
 function _update60()
  if charsel then
   if charsel_update() then
@@ -320,6 +387,11 @@ function _update60()
   end
   return
  end
+ 
+ temptimer += 1
+ if temptimer == 60 then
+  make_box(10)
+ end
 
  if p1:isme() then
 	 simple_⬅️➡️(p1)
@@ -327,6 +399,9 @@ function _update60()
 	 simple_⬅️➡️(p2)
 	end
 
+ for _,b in pairs(boxes) do
+  update_box(b)
+ end
  update_guy(p1)
  update_guy(p2)
 end
@@ -346,6 +421,11 @@ function contains(█, ◆)
         ◆.x < █.x+█.w and
         ◆.y > █.y      and
         ◆.y < █.y+█.h
+end
+
+local function call(d, g, r)
+ if not r.collide then return end
+ r:collide(d, g)
 end
 
 function collider(g, █)
@@ -429,6 +509,7 @@ function collider(g, █)
 	  if ★.⬆️⬅️_in or ★.⬇️⬅️_in then
 	   █.x = r.x + r.w
 	   ★:log("bump left")
+	   call('⬅️', g, r)
 	   return true
 	  end
 	  return false
@@ -438,6 +519,7 @@ function collider(g, █)
 	  if ★.⬆️➡️_in or ★.⬇️➡️_in then
 	   █.x = r.x - █.w
 	   ★:log("bump right")
+	   call('➡️', g, r)
 	   return true
 	  end
 	  return false
@@ -450,8 +532,8 @@ function collide_guy(g)
  █.x = █.x + g.x
  █.y = █.y + g.y
  local ˇ = collider(g, █)
- 
- for _i,r in ipairs(collision_rects) do
+
+ local function doit(r)
   ˇ:compute(r)
   
   -- ˇ should adjust █ until
@@ -469,6 +551,13 @@ function collide_guy(g)
 		 
 		 ˇ:compute(r)
 		end
+ end
+
+ for _i,r in ipairs(collision_rects) do
+  doit(r)
+ end
+ for _k,b in pairs(boxes) do
+  doit(b)
  end
  
  g.x = █.x - g.who.box.x
@@ -512,6 +601,11 @@ end
 function draw_world()
  draw_rect(floor)
  draw_rect(testbox)
+ 
+ for _,box in pairs(boxes) do
+  draw_rect(box)
+  print('boxy', 2, 105)
+ end
 end
 -->8
 -- char select

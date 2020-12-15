@@ -226,9 +226,8 @@ function update_guy(g)
  g.x = g.x + g.dx
  g.y = g.y + g.dy
  
- if g:isme() then
-  collide_guy(g)
- else
+ collide_guy(g)
+ if not g:isme() then
   net_adjust(g)
  end
  
@@ -252,6 +251,7 @@ function update_guy(g)
  -- gpio write & camera
  if g:isme() then
 	 local a = my_plr_addr()
+
 	 poke4(a.x, g.x)
 	 poke4(a.y, g.y)
 	 poke(a.go, g.go)

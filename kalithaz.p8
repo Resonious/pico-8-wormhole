@@ -180,7 +180,7 @@ function make_box(x)
   end
  }
  
- boxes[id] = box
+ add(boxes, box)
  -- todo dirty it?
  
  poke(addr.boxid, id)
@@ -556,7 +556,7 @@ function collide_guy(g)
  for _i,r in ipairs(collision_rects) do
   doit(r)
  end
- for _k,b in pairs(boxes) do
+ for _i,b in ipairs(boxes) do
   doit(b)
  end
  

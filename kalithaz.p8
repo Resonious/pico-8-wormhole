@@ -165,7 +165,7 @@ function make_box(x)
   id=id,
  
   x=x, y=5,
-  dx=0,dy=1,
+  dx=0,dy=0.1,
   
   w=16,h=16,
   
@@ -311,7 +311,7 @@ function update_box(b)
  b.dx = to_zero(b.dx, 1.1)
  
  b.x = b.x + b.dx
- b.y = b.y + b.dy 
+ b.y = b.y + b.dy
 end
 
 
@@ -402,6 +402,7 @@ function _update60()
  for _,b in pairs(boxes) do
   update_box(b)
  end
+ collide_boxes()
  update_guy(p1)
  update_guy(p2)
 end
@@ -414,6 +415,18 @@ function copy(x)
   c[k] = v
  end
 	return c
+end
+
+function overlap(█1, █2)
+ if █1.x >= █2.x+█2.w
+ or █2.x >= █1.x+█1.w
+ then return false end
+ 
+ if █1.y+█1.h <= █2.y
+ or █2.y+█2.h <= █1.y
+ then return false end
+ 
+ return true
 end
 
 function contains(█, ◆)
@@ -564,6 +577,55 @@ function collide_guy(g)
  g.y = █.y - g.who.box.y
 end
 
+function collide_boxes()
+ local function hash(a,b)
+ 	if a > b then
+	  return a * 1000 + b * 100
+	 else
+	  return b * 1000 + a * 100
+	 end
+ end
+ 
+ local done = {}
+
+ for _i,b1 in ipairs(boxes) do
+  for _i,b2 in ipairs(boxes) do
+   local h = hash(b1.id, b2.id)
+   if not done[h] then
+   	done[h] = true
+   	
+   	if overlap(b1, b2) then
+   	 -- assume squares...
+   	 local c1 = {
+   	  x = b1.x + b1.w/2,
+   	  y = b1.y + b1.h/2
+   	 }
+   	 local c2 = {
+   	  x = b2.x + b2.w/2,
+   	  y = b2.y + b2.h/2
+   	 }
+   	 local d = {
+   	  x = c1.x - c2.x,
+   	  y = c1.y - c2.y
+   	 }
+   	 local bump = {
+   	  x = d.x - (b1.w + b2.w)/2,
+   	  y = d.y - (b1.h + b2.h)/2
+   	 }
+   	 
+   	 if abs(d.x) >= abs(d.y) then
+	   	 b1.x -= bump.x/2
+	   	 b2.x += bump.x/2
+   	 else
+	   	 b1.y -= bump.y/2
+	   	 b2.y += bump.y/2
+   	 end
+   	end
+   end
+  end
+ end
+end
+
 -->8
 -- the world
 
@@ -602,8 +664,11 @@ function draw_world()
  draw_rect(floor)
  draw_rect(testbox)
  
- for _,box in pairs(boxes) do
+ local box1 = boxes[1]
+
+ for _,box in ipairs(boxes) do
   draw_rect(box)
+
   print('boxy', 2, 105)
  end
 end

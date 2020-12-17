@@ -165,7 +165,7 @@ function make_box(x)
   id=id,
  
   x=x, y=5,
-  dx=0,dy=0.1,
+  dx=0,dy=1,
   
   w=16,h=16,
   
@@ -577,6 +577,32 @@ function collide_guy(g)
  g.y = █.y - g.who.box.y
 end
 
+function compute_bump(b1, b2)
+ local bump = {
+  ⬆️ = (b2.y+b2.h) - b1.y,
+  ⬇️ = b2.y - (b1.y+b1.h),
+  ⬅️ = (b2.x+b2.w) - b1.x,
+  ➡️ = b2.x - (b1.x+b1.w)
+ }
+ 
+ local mv = 32767.99999
+ local mk = ''
+ for k,v in pairs(bump) do
+  if abs(v) < abs(mv) then
+   mv = v
+   mk = k
+  end
+ end
+ 
+ if mk == '⬅️' or mk == '➡️' then
+  return { x=mv, y=0 }
+ elseif mk == '⬆️' or mk == '⬇️' then
+  return { x=0, y=mv }
+ else
+ 	assert(false)
+ end
+end
+
 function collide_boxes()
  local function hash(a,b)
  	if a > b then
@@ -595,34 +621,25 @@ function collide_boxes()
    	done[h] = true
    	
    	if overlap(b1, b2) then
-   	 -- assume squares...
-   	 local c1 = {
-   	  x = b1.x + b1.w/2,
-   	  y = b1.y + b1.h/2
-   	 }
-   	 local c2 = {
-   	  x = b2.x + b2.w/2,
-   	  y = b2.y + b2.h/2
-   	 }
-   	 local d = {
-   	  x = c1.x - c2.x,
-   	  y = c1.y - c2.y
-   	 }
-   	 local bump = {
-   	  x = d.x - (b1.w + b2.w)/2,
-   	  y = d.y - (b1.h + b2.h)/2
-   	 }
+					local bump = compute_bump(b1, b2)
    	 
-   	 if abs(d.x) >= abs(d.y) then
-	   	 b1.x -= bump.x/2
-	   	 b2.x += bump.x/2
-   	 else
-	   	 b1.y -= bump.y/2
-	   	 b2.y += bump.y/2
-   	 end
+   	 b1.x += bump.x/2
+   	 b2.x -= bump.x/2
+   	 b1.y += bump.y/2
+   	 b2.y -= bump.y/2
    	end
    end
   end
+ end
+ 
+ for _i,b1 in ipairs(boxes) do
+	 for _i,r in ipairs(collision_rects) do
+			if overlap(b1, r) then
+			 local bump = compute_bump(b1, r)
+			 b1.x += bump.x
+			 b1.y += bump.y
+			end
+	 end
  end
 end
 
@@ -641,12 +658,12 @@ local testbox = {
 
 collision_rects = {
  { -- left boundary
-  x=-100,y=0,
-  w=100, h=1000
+  x=-1000,y=-500,
+  w=1000, h=1000
  },
  { -- right boundary
-  x=128,y=0,
-  w=100,h=1000
+  x=128,y=-500,
+  w=1000,h=1000
  },
 
  floor,

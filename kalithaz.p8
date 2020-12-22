@@ -48,10 +48,10 @@ end
 local function alloc_plr()
  return {
   x  = alloc(4),
-	 y  = alloc(4),
-	 go = alloc(1),
-	 state = alloc(1),
-	 who_i = alloc(1)
+  y  = alloc(4),
+  go = alloc(1),
+  state = alloc(1),
+  who_i = alloc(1)
  }
 end
 -- end crap
@@ -95,7 +95,7 @@ end
 guys = {
  elimon = {
   start_spr = 0,
-  box = {x=5,y=3,w=5,h=12}
+  box = {x=5,y=3,w=5,h=13}
  },
  cenn   = {
   start_spr = 32,
@@ -135,12 +135,12 @@ function make_guy(plr)
  
  -- construct table
  return {
-		who=bros[who_i],
-		plr=plr,
-		
-		go=1,
-		left=false,
-		
+  who=bros[who_i],
+  plr=plr,
+  
+  go=1,
+  left=false,
+  
   x=20, y=20,
   dx=0, dy=0,
   
@@ -208,6 +208,7 @@ function simple_⬅️➡️(g)
  end
 end
 
+cam_target = nil
 function cam_follow(g)
  local █ = g.who.box
  local ◆ = {
@@ -241,12 +242,12 @@ function update_guy(g)
 
  -- gpio read
  if not g:isme() then
-	 local a = net_plr_addr()
-	 g.net_x = $a.x
-	 g.net_y = $a.y
-	 g.go = @a.go
-	 -- todo state redundant
-	 g.state = @a.state
+  local a = net_plr_addr()
+  g.net_x = $a.x
+  g.net_y = $a.y
+  g.go = @a.go
+  -- todo state redundant
+  g.state = @a.state
  end
 
  -- handle speed
@@ -254,8 +255,8 @@ function update_guy(g)
   g.dx = to_zero(g.dx, 0.3)
  else
   local go = g.go - 1
-	 g.dx = g.dx + (go * 0.6)
-	end
+  g.dx = g.dx + (go * 0.6)
+ end
  
  if g.dy > term_vel_y then
   g.dy = term_vel_y
@@ -293,14 +294,14 @@ function update_guy(g)
  
  -- gpio write & camera
  if g:isme() then
-	 local a = my_plr_addr()
+  local a = my_plr_addr()
 
-	 poke4(a.x, g.x)
-	 poke4(a.y, g.y)
-	 poke(a.go, g.go)
-	 poke(a.state, g.state)
-	 
-	 cam_follow(g)
+  poke4(a.x, g.x)
+  poke4(a.y, g.y)
+  poke(a.go, g.go)
+  poke(a.state, g.state)
+  
+  cam_follow(g)
  end
 end
 
@@ -336,22 +337,22 @@ end
 -- drawing
 
 function draw_guy(g)
-	local s = g.who.start_spr
-	
-	if g.state == sm.walk then
-	 s = s + 2
-	 if g.timer % 15 > 7 then
-	  s = s + 2
-	 end
-	end
-	
-	spr(s, g.x, g.y, 2, 2, g.left)
+ local s = g.who.start_spr
+ 
+ if g.state == sm.walk then
+  s = s + 2
+  if g.timer % 15 > 7 then
+   s = s + 2
+  end
+ end
+ 
+ spr(s, g.x, g.y, 2, 2, g.left)
 
  --local █ = g.who.box
-	--rect(
+ --rect(
  -- g.x+█.x, g.y+█.y,
  -- g.x+█.x+█.w, g.y+█.y+█.h
-	--)
+ --)
 end
 
 
@@ -360,6 +361,8 @@ end
 charsel = true
 
 function _draw()
+ -- if true then print(gpio - addr_ptr + 127) return end
+ 
  if charsel then
   charsel_draw()
   return
@@ -368,8 +371,8 @@ function _draw()
  if not p2.who then return end
 
  cls(1)
-	--map(0, 0, 0, 0, 16, 8)
-	
+ --map(0, 0, 0, 0, 16, 8)
+ 
  draw_world()
  draw_guy(p1)
  draw_guy(p2)
@@ -377,13 +380,15 @@ end
 
 
 local temptimer = 0
+tempguys()
+  make_box(50)
 
 function _update60()
  if charsel then
   if charsel_update() then
    charsel = false
-			p1 = make_guy(0)
-			p2 = make_guy(1)
+   p1 = make_guy(0)
+   p2 = make_guy(1)
   end
   return
  end
@@ -394,10 +399,10 @@ function _update60()
  end
 
  if p1:isme() then
-	 simple_⬅️➡️(p1)
-	else
-	 simple_⬅️➡️(p2)
-	end
+  simple_⬅️➡️(p1)
+ else
+  simple_⬅️➡️(p2)
+ end
 
  for _,b in pairs(boxes) do
   update_box(b)
@@ -410,11 +415,11 @@ end
 -- physics file
 
 function copy(x)
-	local c = {}
+ local c = {}
  for k,v in pairs(x) do
   c[k] = v
  end
-	return c
+ return c
 end
 
 function overlap(█1, █2)
@@ -447,30 +452,30 @@ function collider(g, █)
    -- debug crap
    ★.msg = ""
    
-		 ★.⬆️⬅️ = {
-		  x=█.x,
-		  y=█.y
-		 }
-		 ★.⬆️➡️ = {
-		  x=█.x+█.w,
-		  y=█.y
-		 }
-		 ★.⬇️⬅️ = {
-		  x=█.x,
-		  y=█.y+█.h
-		 }
-		 ★.⬇️➡️ = {
-		  x=█.x+█.w,
-		  y=█.y+█.h
-		 }
-		 ★.⬆️⬅️_in = contains(r, ★.⬆️⬅️)
-		 ★.⬆️➡️_in = contains(r, ★.⬆️➡️)
-		 ★.⬇️⬅️_in = contains(r, ★.⬇️⬅️)
-		 ★.⬇️➡️_in = contains(r, ★.⬇️➡️)
-		 ★.p_⬇️ = █.y+█.h - g.dy
-		 ★.p_⬆️ = █.y - g.dy
-		 ★.⬇️bump = 2
-		 ★.⬆️bump = 1
+   ★.⬆️⬅️ = {
+    x=█.x,
+    y=█.y
+   }
+   ★.⬆️➡️ = {
+    x=█.x+█.w,
+    y=█.y
+   }
+   ★.⬇️⬅️ = {
+    x=█.x,
+    y=█.y+█.h
+   }
+   ★.⬇️➡️ = {
+    x=█.x+█.w,
+    y=█.y+█.h
+   }
+   ★.⬆️⬅️_in = contains(r, ★.⬆️⬅️)
+   ★.⬆️➡️_in = contains(r, ★.⬆️➡️)
+   ★.⬇️⬅️_in = contains(r, ★.⬇️⬅️)
+   ★.⬇️➡️_in = contains(r, ★.⬇️➡️)
+   ★.p_⬇️ = █.y+█.h - g.dy
+   ★.p_⬆️ = █.y - g.dy
+   ★.⬇️bump = 2
+   ★.⬆️bump = 1
   end,
   
   log = function(★, m)
@@ -481,62 +486,62 @@ function collider(g, █)
   end,
   
   collide_⬇️ = function(★, r)
-		 if
-	   -- bottom corner inside r
-	   (★.⬇️⬅️_in or ★.⬇️➡️_in)
-	   and (
-	    -- previous frame was above
-	    ★.p_⬇️ <= r.y
-		   or
-		   -- within bump threshold
-		   abs(r.y-(█.y+█.h)) <= ★.⬇️bump
-	   )
-	  then -- bump up
-	   █.y = r.y - █.h
-	   ★:log("bump up")
-	   return true
-	  end
-	  return false
-	 end,
-	 
+   if
+    -- bottom corner inside r
+    (★.⬇️⬅️_in or ★.⬇️➡️_in)
+    and (
+     -- previous frame was above
+     ★.p_⬇️ <= r.y
+     or
+     -- within bump threshold
+     abs(r.y-(█.y+█.h)) <= ★.⬇️bump
+    )
+   then -- bump up
+    █.y = r.y - █.h
+    ★:log("bump up")
+    return true
+   end
+   return false
+  end,
+  
   collide_⬆️ = function(★, r)
-	  if
-		  -- top corner inside r
-		  (★.⬆️⬅️_in or ★.⬆️➡️_in)
-		  and (
-		   -- previous frame was below
-		   ★.p_⬆️ >= r.y+r.h
-		   or
-		   -- within bump threshold
-		   abs((r.y+r.h)-█.y) <= ★.⬆️bump
-		  )
-	  then -- bump down
-	   █.y = r.y + r.h
-	   ★:log("bump down")
-	   return true
-	  end
-	  return false
-	 end,
-	 
+   if
+    -- top corner inside r
+    (★.⬆️⬅️_in or ★.⬆️➡️_in)
+    and (
+     -- previous frame was below
+     ★.p_⬆️ >= r.y+r.h
+     or
+     -- within bump threshold
+     abs((r.y+r.h)-█.y) <= ★.⬆️bump
+    )
+   then -- bump down
+    █.y = r.y + r.h
+    ★:log("bump down")
+    return true
+   end
+   return false
+  end,
+  
   collide_⬅️ = function(★, r)
-	  if ★.⬆️⬅️_in or ★.⬇️⬅️_in then
-	   █.x = r.x + r.w
-	   ★:log("bump left")
-	   call('⬅️', g, r)
-	   return true
-	  end
-	  return false
-	 end,
-	 
-	 collide_➡️ = function(★, r)
-	  if ★.⬆️➡️_in or ★.⬇️➡️_in then
-	   █.x = r.x - █.w
-	   ★:log("bump right")
-	   call('➡️', g, r)
-	   return true
-	  end
-	  return false
-	 end
+   if ★.⬆️⬅️_in or ★.⬇️⬅️_in then
+    █.x = r.x + r.w
+    ★:log("bump left")
+    call('⬅️', g, r)
+    return true
+   end
+   return false
+  end,
+  
+  collide_➡️ = function(★, r)
+   if ★.⬆️➡️_in or ★.⬇️➡️_in then
+    █.x = r.x - █.w
+    ★:log("bump right")
+    call('➡️', g, r)
+    return true
+   end
+   return false
+  end
  }
 end
 
@@ -553,17 +558,17 @@ function collide_guy(g)
   -- there is no more overlap
   local cnt = 0
   while
-	  ˇ:collide_⬇️(r) or
-			ˇ:collide_⬆️(r) or
-			ˇ:collide_⬅️(r) or
-			ˇ:collide_➡️(r)
-		do
-		 -- sanity check / assertion
-		 cnt = cnt + 1
-		 if cnt > 100 then die("✽⬆️🐱⌂") end
-		 
-		 ˇ:compute(r)
-		end
+   ˇ:collide_⬇️(r) or
+   ˇ:collide_⬆️(r) or
+   ˇ:collide_⬅️(r) or
+   ˇ:collide_➡️(r)
+  do
+   -- sanity check / assertion
+   cnt = cnt + 1
+   if cnt > 100 then die("✽⬆️🐱⌂") end
+   
+   ˇ:compute(r)
+  end
  end
 
  for _i,r in ipairs(collision_rects) do
@@ -599,17 +604,17 @@ function compute_bump(b1, b2)
  elseif mk == '⬆️' or mk == '⬇️' then
   return { x=0, y=mv }
  else
- 	assert(false)
+  assert(false)
  end
 end
 
 function collide_boxes()
  local function hash(a,b)
- 	if a > b then
-	  return a * 1000 + b * 100
-	 else
-	  return b * 1000 + a * 100
-	 end
+  if a > b then
+   return a * 1000 + b * 100
+  else
+   return b * 1000 + a * 100
+  end
  end
  
  local done = {}
@@ -618,28 +623,28 @@ function collide_boxes()
   for _i,b2 in ipairs(boxes) do
    local h = hash(b1.id, b2.id)
    if not done[h] then
-   	done[h] = true
-   	
-   	if overlap(b1, b2) then
-					local bump = compute_bump(b1, b2)
-   	 
-   	 b1.x += bump.x/2
-   	 b2.x -= bump.x/2
-   	 b1.y += bump.y/2
-   	 b2.y -= bump.y/2
-   	end
+    done[h] = true
+    
+    if overlap(b1, b2) then
+     local bump = compute_bump(b1, b2)
+     
+     b1.x += bump.x/2
+     b2.x -= bump.x/2
+     b1.y += bump.y/2
+     b2.y -= bump.y/2
+    end
    end
   end
  end
  
  for _i,b1 in ipairs(boxes) do
-	 for _i,r in ipairs(collision_rects) do
-			if overlap(b1, r) then
-			 local bump = compute_bump(b1, r)
-			 b1.x += bump.x
-			 b1.y += bump.y
-			end
-	 end
+  for _i,r in ipairs(collision_rects) do
+   if overlap(b1, r) then
+    local bump = compute_bump(b1, r)
+    b1.x += bump.x
+    b1.y += bump.y
+   end
+  end
  end
 end
 
@@ -669,7 +674,7 @@ collision_rects = {
 }
 
 local function draw_rect(r)
-	color(8)
+ color(8)
  rectfill(
   r.x,r.y,
   r.x+r.w,r.y+r.h
@@ -698,11 +703,11 @@ end
 
 local function align_camera()
  if cam_target then
-	 local c = {
-	  x = min(cam_target.x, floor.w-128),
-	  y = cam_target.y
-	 }
-	 camera(c.x, c.y)
+  local c = {
+   x = min(cam_target.x, floor.w-128),
+   y = cam_target.y
+  }
+  camera(c.x, c.y)
  end
 end
 
@@ -728,8 +733,8 @@ local plat_⬅️ = 176
 
 -- here we go
 function charsel_update()
-	local me = my_plr_addr()
-	local net = net_plr_addr()
+ local me = my_plr_addr()
+ local net = net_plr_addr()
  local sel = @me.who_i
  local nsel = @net.who_i
  local go = @me.go
@@ -739,13 +744,13 @@ function charsel_update()
   if go == 1 then return false end
  
   sel = sel + by
-		if sel < 1 then
-	  sel = 4
-	 elseif sel > 4 then
-	  sel = 1
-	 end
-	 
-	 return true
+  if sel < 1 then
+   sel = 4
+  elseif sel > 4 then
+   sel = 1
+  end
+  
+  return true
  end
 
  if btnp(1) then
@@ -777,8 +782,8 @@ function charsel_update()
 end
 
 function charsel_draw()
-	local me = my_plr_addr()
-	local net = net_plr_addr()
+ local me = my_plr_addr()
+ local net = net_plr_addr()
  local sel = @me.who_i
  local nsel = @net.who_i
  local go = @me.go
@@ -786,8 +791,8 @@ function charsel_draw()
  
  cls(3)
 
-	local base_x = 20
-	local base_y = 32
+ local base_x = 20
+ local base_y = 32
  for i,v in ipairs(bros) do
   local y = base_y
   local plat = plat_⬅️
@@ -809,16 +814,16 @@ function charsel_draw()
    base_x, y, 2, 2
   )
   
-	 spr(
-	  plat,
-	  base_x, y+15, 1, 1,
-	  false
-	 )
-	 spr(
-	  plat,
-	  base_x+8, y+15, 1, 1,
-	  true
-	 )
+  spr(
+   plat,
+   base_x, y+15, 1, 1,
+   false
+  )
+  spr(
+   plat,
+   base_x+8, y+15, 1, 1,
+   true
+  )
   
   base_x = base_x + 22
  end

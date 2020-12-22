@@ -8,6 +8,21 @@ __lua__
 -- ▥❎🐱ˇ▒♪😐
 -- z x c v b n m
 
+-- system
+
+msgs = {}
+function log(msg)
+ add(msgs, msg)
+ if #msgs > 3 then
+  deli(msgs, 1)
+ end
+end
+
+deferred = {}
+function defer(f)
+ add(deferred, f)
+end
+
 
 -- math
 
@@ -39,9 +54,7 @@ local function alloc(bytes)
  local result = addr_ptr
  addr_ptr = addr_ptr + bytes
  -- sanity check
- if addr_ptr - gpio >= 127 then
-  die("too much gpio :(")
- end
+ assert(addr_ptr - gpio < 127)
  return result
 end
 
@@ -64,13 +77,14 @@ addr.p1 = alloc_plr()
 addr.p2 = alloc_plr()
 
 -- box data
-addr.boxid = alloc(1)
 addr.boxes = {}
 nboxes = 6 -- dunno good value
 for i = 1,nboxes do
  addr.boxes[i] = {
   id    = alloc(1),
+  ack   = alloc(1),
   x     = alloc(1),
+  y     = alloc(1),
   state = alloc(1)
  }
 end
@@ -122,9 +136,14 @@ sm = { -- "sm" for state machine
  walk = 1
 }
 
+box_sm = {
+ dead = 0,
+ normal = 1
+}
+maxbox = 64
+
 term_vel_x = 1.0
 term_vel_y = 4.0
-
 
 -- factories..
 
@@ -156,20 +175,34 @@ function make_guy(plr)
  }
 end
 
-function make_box(x)
- -- todo multiple types, hp, etc
- local id = @addr.boxid
- id = id + 1
-
- local box = {
-  id=id,
+function spawn_box(x)
+ if @myplr == 1 then return end
  
-  x=x, y=5,
+ for i = 1,maxbox do
+  if boxes[i].state == box_sm.dead then
+	  boxes[i].state = box_sm.normal
+	  boxes[i].x = x
+	  boxes[i].y = 0
+	  boxes[i].dirty = true
+	  
+		 log("spawned box "..i)
+		 return
+  end
+ end
+end
+
+boxes = {}
+for i = 1,maxbox do
+ add(boxes, {
+  id=i,
+ 
+  x=0, y=5,
   dx=0,dy=1,
   
   w=16,h=16,
   
   dirty=false,
+  state=0,
   
   collide = function(★, d, g)
    if d == '⬅️' then
@@ -178,12 +211,7 @@ function make_box(x)
     ★.dx = 2
    end
   end
- }
- 
- add(boxes, box)
- -- todo dirty it?
- 
- poke(addr.boxid, id)
+ })
 end
 
 
@@ -313,6 +341,76 @@ function update_box(b)
  
  b.x = b.x + b.dx
  b.y = b.y + b.dy
+
+ -- syncing beyond this point
+ if @myplr == 1 then return end
+
+ if b.dx ~= 0 then
+  b.dirty = true
+ end
+end
+
+function write_boxes()
+ for i = 1,maxbox do
+  local b = boxes[i]
+
+		local function write(i)
+		 local a = addr.boxes[i]
+		 poke(a.id, b.id)
+		 poke(a.x, b.x)
+		 poke(a.y, b.y)
+		 poke(a.state, b.state)
+		 b.dirty = false
+		 
+		 log("wrote box "..
+		     tostr(b.id)..
+		     " to "..
+		     tostr(i))
+		end
+  
+  local function doit()
+			for i = 1,nboxes do
+			 if @addr.boxes[i].id == b.id then
+			  write(i)
+			  return
+			 end
+			end
+			
+			for i = 1,nboxes do
+			 if @addr.boxes[i].id == 0
+			 or @addr.boxes[i].id == @addr.boxes[i].ack
+			 then
+			  write(i)
+			  return
+			 end
+			end
+			
+			no_more_slots()
+  end
+  
+  if b.state ~= box_sm.dead
+  and b.dirty then
+	  doit()
+  end
+ end
+end
+
+function read_boxes()
+	for i = 1,nboxes do
+	 local a = addr.boxes[i]
+	 local id = @a.id
+	 
+	 -- consume
+	 if id ~= 0 then
+	  local b = boxes[id]
+	  b.x = @a.x
+	  b.y = @a.y
+	  b.state = @a.state
+
+	  poke(a.ack, b.id)
+	  log("read box "..tostr(b.id))
+	 end
+	end
 end
 
 
@@ -320,8 +418,6 @@ end
 
 p1 = {}
 p2 = {}
-
-boxes = {}
 
 
 -- debug
@@ -380,8 +476,7 @@ end
 
 
 local temptimer = 0
-tempguys()
-  make_box(50)
+-- tempguys()
 
 function _update60()
  if charsel then
@@ -393,9 +488,18 @@ function _update60()
   return
  end
  
+ for _,v in ipairs(deferred) do
+  v()
+ end
+ deferred = {}
+ 
  temptimer += 1
  if temptimer == 60 then
-  make_box(10)
+  spawn_box(10)
+ elseif temptimer == 360 then
+  spawn_box(120)
+ elseif temptimer == 1000 then
+  spawn_box(50)
  end
 
  if p1:isme() then
@@ -404,12 +508,20 @@ function _update60()
   simple_⬅️➡️(p2)
  end
 
+ if @myplr == 1 then
+  read_boxes()
+ end
  for _,b in pairs(boxes) do
   update_box(b)
  end
+
  collide_boxes()
  update_guy(p1)
  update_guy(p2)
+
+ if @myplr == 0 then
+  write_boxes()
+ end
 end
 -->8
 -- physics file
@@ -620,30 +732,36 @@ function collide_boxes()
  local done = {}
 
  for _i,b1 in ipairs(boxes) do
-  for _i,b2 in ipairs(boxes) do
-   local h = hash(b1.id, b2.id)
-   if not done[h] then
-    done[h] = true
-    
-    if overlap(b1, b2) then
-     local bump = compute_bump(b1, b2)
-     
-     b1.x += bump.x/2
-     b2.x -= bump.x/2
-     b1.y += bump.y/2
-     b2.y -= bump.y/2
-    end
-   end
+  if b1.state ~= box_sm.dead then
+	  for _i,b2 in ipairs(boxes) do
+	   if b2.state ~= box_sm.dead then
+		   local h = hash(b1.id, b2.id)
+		   if not done[h] then
+		    done[h] = true
+		    
+		    if overlap(b1, b2) then
+		     local bump = compute_bump(b1, b2)
+		     
+		     b1.x += bump.x/2
+		     b2.x -= bump.x/2
+		     b1.y += bump.y/2
+		     b2.y -= bump.y/2
+		    end
+		   end
+	   end
+	  end
   end
  end
  
  for _i,b1 in ipairs(boxes) do
-  for _i,r in ipairs(collision_rects) do
-   if overlap(b1, r) then
-    local bump = compute_bump(b1, r)
-    b1.x += bump.x
-    b1.y += bump.y
-   end
+  if b1.state ~= box_sm.dead then
+	  for _i,r in ipairs(collision_rects) do
+	   if overlap(b1, r) then
+	    local bump = compute_bump(b1, r)
+	    b1.x += bump.x
+	    b1.y += bump.y
+	   end
+	  end
   end
  end
 end
@@ -681,10 +799,12 @@ local function draw_rect(r)
  )
 end
 
-local function draw_box(r)
+local function draw_box(b)
+	if b.state == box_sm.dead then return end
+
  spr(
   132,
-  r.x, r.y,
+  b.x, b.y,
   2, 2
  )
 end
@@ -711,6 +831,7 @@ local function align_camera()
  end
 end
 
+
 function draw_world()
  camera(0, 0)
  draw_scene()
@@ -723,7 +844,12 @@ function draw_world()
  for _,box in ipairs(boxes) do
   draw_box(box)
  end
+ 
+ for i,m in ipairs(msgs) do
+  print(m, 3, floor.y + i * 6, 0)
+ end
 end
+
 -->8
 -- char select
 

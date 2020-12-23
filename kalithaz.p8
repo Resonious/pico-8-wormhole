@@ -516,12 +516,8 @@ function _update60()
  deferred = {}
  
  temptimer += 1
- if temptimer == 60 then
-  spawn_box(10)
- elseif temptimer == 360 then
-  spawn_box(120)
- elseif temptimer == 1000 then
-  spawn_box(50)
+ if temptimer % 200 == 0 then
+  spawn_box(rnd(8*21))
  end
 
  if p1:isme() then
@@ -764,10 +760,19 @@ function collide_boxes()
 		    if overlap(b1, b2) then
 		     local bump = compute_bump(b1, b2)
 		     
+		     if bump.x == 0 then
+		      if b1.y < b2.y then
+				     b1.y += bump.y
+			     else
+				     b2.y -= bump.y
+		      end
+	      else
+			     b1.y += bump.y/2
+			     b2.y -= bump.y/2
+		     end
+		     
 		     b1.x += bump.x/2
 		     b2.x -= bump.x/2
-		     b1.y += bump.y/2
-		     b2.y -= bump.y/2
 		    end
 		   end
 	   end
@@ -870,6 +875,8 @@ function draw_world()
  for i,m in ipairs(msgs) do
   print(m, 3, floor.y + i * 6, 0)
  end
+ local leftover_gpio = addr_ptr - gpio
+ print(tostr(leftover_gpio), 30, floor.y + 6, 0)
 end
 
 -->8

@@ -121,7 +121,7 @@ guys = {
  },
  hector = {
   start_spr = 96,
-  box = {x=4,y=2,w=4,h=15}
+  box = {x=4,y=2,w=4,h=14}
  }
 }
 bros = {
@@ -199,6 +199,8 @@ for i = 1,maxbox do
   x=0, y=5,
   dx=0,dy=1,
   
+  net_y=0,
+  
   w=16,h=16,
   
   dirty=false,
@@ -253,6 +255,18 @@ end
 -- update position if it strays
 -- too far from net position
 function net_adjust(g)
+ if not g.net_timer then
+  g.net_timer = 0
+ end
+ g.net_timer += 1
+ 
+ if g.net_timer > 60 then
+  g.x = g.net_x
+  g.y = g.net_y
+  g.net_timer = 0
+  return
+ end
+
  local x∧ = abs(g.net_x - g.x)
            / 30.0
            + 0.1
@@ -339,15 +353,19 @@ function update_box(b)
  end
  b.dx = to_zero(b.dx, 1.1)
  
+ local p_x = b.x
+ 
  b.x = b.x + b.dx
  b.y = b.y + b.dy
 
  -- syncing beyond this point
  if @myplr == 1 then return end
 
- if b.dx ~= 0 then
-  b.dirty = true
- end
+ defer(function()
+  if b.x != p_x then
+   b.dirty = true
+  end
+ end)
 end
 
 function write_boxes()
@@ -404,7 +422,11 @@ function read_boxes()
 	 if id ~= 0 then
 	  local b = boxes[id]
 	  b.x = @a.x
-	  b.y = @a.y
+	  if b.net_y != @a.y then
+	   b.y = @a.y
+	   log("updated y")
+	  end
+	  b.net_y = @a.y
 	  b.state = @a.state
 
 	  poke(a.ack, b.id)

@@ -10,16 +10,19 @@ And here is my very lazy ruby script to actually build a pico-8 cart into this p
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+# put in and run from /home/nigel/.lexaloffle/pico-8/carts
+
 require 'fileutils'
 
 webwormhole_src = ARGV[0] || (raise 'specify webwormhole src in first arg')
 
-system 'pico8 demo.p8 -export demo.html'
+FileUtils.cp "#{webwormhole_src}/kalithaz.p8", 'kalithaz.p8'
+system '/home/nigel/Sources/pico-8/pico8 kalithaz.p8 -export kalithaz.html'
 
-FileUtils.cp './demo.js', "#{webwormhole_src}/web/cart"
+FileUtils.cp './kalithaz.js', "#{webwormhole_src}/web/cart"
 
-File.open('./demo.html', 'r') do |src|
-  File.open("#{webwormhole_src}/web/cart/demo.html", 'w') do |dest|
+File.open('./kalithaz.html', 'r') do |src|
+  File.open("#{webwormhole_src}/web/cart/kalithaz.html", 'w') do |dest|
     src.each_line do |line|
       case line.strip
       when '<!-- Add any content above the cart here -->'
@@ -35,10 +38,10 @@ File.open('./demo.html', 'r') do |src|
   end
 end
 
-FileUtils.cp "#{webwormhole_src}/web/cart/demo.html",
+FileUtils.cp "#{webwormhole_src}/web/cart/kalithaz.html",
              "#{webwormhole_src}/web/index.html"
-FileUtils.cp "#{webwormhole_src}/web/cart/demo.js",
-             "#{webwormhole_src}/web/demo.js"
+FileUtils.cp "#{webwormhole_src}/web/cart/kalithaz.js",
+             "#{webwormhole_src}/web/kalithaz.js"
 
 puts 'Copied!'
 ```

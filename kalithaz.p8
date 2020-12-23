@@ -12,10 +12,16 @@ __lua__
 
 msgs = {}
 function log(msg)
+ if msg_is(msg) then return end
+
  add(msgs, msg)
  if #msgs > 3 then
   deli(msgs, 1)
  end
+end
+function msg_is(eq)
+ return #msgs ~= 0 and
+        msgs[#msgs] == eq
 end
 
 deferred = {}
@@ -133,7 +139,8 @@ bros = {
 
 sm = { -- "sm" for state machine
  idle = 0,
- walk = 1
+ walk = 1,
+ dead = 2
 }
 
 box_sm = {
@@ -143,7 +150,7 @@ box_sm = {
 maxbox = 64
 
 term_vel_x = 1.0
-term_vel_y = 4.0
+term_vel_y = 2.0
 
 -- factories..
 
@@ -183,6 +190,7 @@ function spawn_box(x)
 	  boxes[i].state = box_sm.normal
 	  boxes[i].x = x
 	  boxes[i].y = 0
+	  boxes[i].dy = 1
 	  boxes[i].dirty = true
 	  
 		 log("spawned box "..i)
@@ -192,28 +200,30 @@ function spawn_box(x)
 end
 
 boxes = {}
-for i = 1,maxbox do
- add(boxes, {
-  id=i,
- 
-  x=0, y=5,
-  dx=0,dy=1,
-  
-  net_y=0,
-  
-  w=16,h=16,
-  
-  dirty=false,
-  state=0,
-  
-  collide = function(★, d, g)
-   if d == '⬅️' then
-    ★.dx = -2
-   elseif d == '➡️' then
-    ★.dx = 2
-   end
-  end
- })
+function setup_boxes()
+	for i = 1,maxbox do
+	 boxes[i] = {
+	  id=i,
+	 
+	  x=0, y=-16,
+	  dx=0,dy=1,
+	  
+	  net_y=0,
+	  
+	  w=16,h=16,
+	  
+	  dirty=false,
+	  state=0,
+	  
+	  collide = function(★, d, g)
+	   if d == '⬅️' then
+	    ★.dx = -2
+	   elseif d == '➡️' then
+	    ★.dx = 2
+	   end
+	  end
+	 }
+	end
 end
 
 
@@ -221,6 +231,10 @@ end
 
 function simple_⬅️➡️(g)
  g.go = 1
+ 
+ if g.state == sm.dead then
+  return
+ end
 
  if btn(0) then
   g.go = g.go - 1
@@ -229,12 +243,29 @@ function simple_⬅️➡️(g)
   g.go = g.go + 1
  end
  
- -- temporary up/down
- if btnp(2) then
-  -- bad
-  g.dy = g.dy - 1
- elseif btnp(3) then
-  g.dy = g.dy + 1
+ -- jomp
+ if btn(4)
+ and g.grounded
+ and not g.tryjump
+ then
+  g.go += 10
+  g.tryjump = true
+ end
+ if not btn(4) then
+  g.tryjump = false
+ end
+ 
+ -- debug bullshit
+ if btnp(5) then
+  for i,b in ipairs(boxes) do
+   if b.state ~= box_sm.dead then
+	   log("b"..tostr(i)..
+	    " x="..tostr(b.x)..
+	    " y="..tostr(b.y)..
+	    " dy="..tostr(b.dy)
+	   )
+   end
+  end
  end
 end
 
@@ -292,14 +323,22 @@ function update_guy(g)
   g.state = @a.state
  end
 
+	local go = g.go
+ -- jump
+ 
+ if go >= 10 then
+	 g.dy = -3
+	 go -= 10
+ end
+
  -- handle speed
- if g.go == 1 then
+ if go == 1 then
   g.dx = to_zero(g.dx, 0.3)
  else
-  local go = g.go - 1
-  g.dx = g.dx + (go * 0.6)
+  g.dx = g.dx + ((go-1) * 0.6)
  end
  
+ g.dy += 0.2
  if g.dy > term_vel_y then
   g.dy = term_vel_y
  end
@@ -312,17 +351,27 @@ function update_guy(g)
  g.x = g.x + g.dx
  g.y = g.y + g.dy
  
+ g.grounded = false
  collide_guy(g)
+ if g.grounded then g.dy = 0 end
  if not g:isme() then
   net_adjust(g)
  end
  
  -- animation
- if g.go == 1 then
-  g.state = sm.idle
- else
-  g.state = sm.walk
-  g.left = g.go < 1
+ if g:isme() then
+ 	if g.state ~= sm.dead then
+		 if go == 1 then
+		  g.state = sm.idle
+		 else
+		  g.state = sm.walk
+		  g.left = go < 1
+		 end
+	 end
+	else
+	 if g.state == sm.walk then
+	  g.left = go < 1
+  end
  end
  
  -- state machine
@@ -334,7 +383,7 @@ function update_guy(g)
   g.p_state = g.state
  end
  
- -- gpio write & camera
+ -- gpio write
  if g:isme() then
   local a = my_plr_addr()
 
@@ -383,7 +432,11 @@ function write_boxes()
 		 log("wrote box "..
 		     tostr(b.id)..
 		     " to "..
-		     tostr(i))
+		     tostr(i)..
+		     " - "..
+		     tostr(b.dy)..','..
+		     tostr(b.y)..','..
+		     tostr(b.net_y))
 		end
   
   local function doit()
@@ -403,7 +456,7 @@ function write_boxes()
 			 end
 			end
 			
-			no_more_slots()
+			log("ran out of slots!")
   end
   
   if b.state ~= box_sm.dead
@@ -430,9 +483,20 @@ function read_boxes()
 	  b.state = @a.state
 
 	  poke(a.ack, b.id)
-	  log("read box "..tostr(b.id))
+	  log("read box "..tostr(b.id)..
+	  " y="..tostr(b.y)..
+	  " net_y="..tostr(b.net_y))
 	 end
 	end
+end
+
+function startover()
+ for i = gpio,addr_ptr do
+  poke(i, 0)
+ end
+ charsel = true
+	end_timer = 0
+	setup_boxes()
 end
 
 
@@ -444,8 +508,12 @@ p2 = {}
 
 -- debug
 function tempguys()
- poke(plr_addr(0).who_i, 1)
- poke(plr_addr(1).who_i, 2)
+ for i = gpio,addr_ptr do
+  poke(i, 0)
+ end
+
+ poke(plr_addr(0).who_i, 2)
+ poke(plr_addr(1).who_i, 1)
  p1 = make_guy(0)
  p2 = make_guy(1)
  charsel = false
@@ -456,6 +524,14 @@ end
 
 function draw_guy(g)
  local s = g.who.start_spr
+ 
+ if g.state == sm.dead then
+  s *= 8
+  local sx = s % 128
+  local sy = s \ 128
+  sspr(sx, sy, 16, 16, g.x, g.y+8, 16, 8, g.left)
+  return
+ end
  
  if g.state == sm.walk then
   s = s + 2
@@ -477,6 +553,7 @@ end
 -- game loop
 
 charsel = true
+end_timer = 0
 
 function _draw()
  -- if true then print(gpio - addr_ptr + 127) return end
@@ -499,6 +576,9 @@ end
 
 local temptimer = 0
 -- tempguys()
+startover()
+
+stat_result = "..."
 
 function _update60()
  if charsel then
@@ -529,17 +609,38 @@ function _update60()
  if @myplr == 1 then
   read_boxes()
  end
- for _,b in pairs(boxes) do
+ for _,b in ipairs(boxes) do
   update_box(b)
  end
 
  collide_boxes()
  update_guy(p1)
  update_guy(p2)
+ 
+ if p1.state == sm.dead
+ and p2.state == sm.dead
+ then
+  end_timer += 1
+  if end_timer > 120 then
+	  startover()
+  end
+ end
+ 
+ -- horrible
+ if p1:isme() and p1.state == sm.dead then
+  cam_follow(p2)
+ elseif p2:isme() and p2.state == sm.dead then
+  cam_follow(p1)  
+ end
 
  if @myplr == 0 then
   write_boxes()
  end
+ 
+ stat_result =
+  tostr(stat(1))..
+  " "..
+  tostr(stat(0))
 end
 -->8
 -- physics file
@@ -628,7 +729,7 @@ function collider(g, █)
     )
    then -- bump up
     █.y = r.y - █.h
-    ★:log("bump up")
+    g.grounded = true
     return true
    end
    return false
@@ -637,18 +738,25 @@ function collider(g, █)
   collide_⬆️ = function(★, r)
    if
     -- top corner inside r
-    (★.⬆️⬅️_in or ★.⬆️➡️_in)
-    and (
+    ★.⬆️⬅️_in or ★.⬆️➡️_in
+   then
+    if
      -- previous frame was below
      ★.p_⬆️ >= r.y+r.h
-     or
+    then -- bump down
+	    █.y = r.y + r.h
+	    if g.dy < 0 then
+	     g.dy = 0
+	    end
+	    return true
+    elseif
      -- within bump threshold
      abs((r.y+r.h)-█.y) <= ★.⬆️bump
-    )
-   then -- bump down
-    █.y = r.y + r.h
-    ★:log("bump down")
-    return true
+    then
+     g.state = sm.dead
+     log("kill!!! "..g.state)
+     return true
+    end
    end
    return false
   end,
@@ -656,7 +764,6 @@ function collider(g, █)
   collide_⬅️ = function(★, r)
    if ★.⬆️⬅️_in or ★.⬇️⬅️_in then
     █.x = r.x + r.w
-    ★:log("bump left")
     call('⬅️', g, r)
     return true
    end
@@ -666,7 +773,6 @@ function collider(g, █)
   collide_➡️ = function(★, r)
    if ★.⬆️➡️_in or ★.⬇️➡️_in then
     █.x = r.x - █.w
-    ★:log("bump right")
     call('➡️', g, r)
     return true
    end
@@ -688,14 +794,16 @@ function collide_guy(g)
   -- there is no more overlap
   local cnt = 0
   while
-   ˇ:collide_⬇️(r) or
-   ˇ:collide_⬆️(r) or
-   ˇ:collide_⬅️(r) or
-   ˇ:collide_➡️(r)
+   g.state != sm.dead and (
+	   ˇ:collide_⬇️(r) or
+	   ˇ:collide_⬆️(r) or
+	   ˇ:collide_⬅️(r) or
+	   ˇ:collide_➡️(r)
+   )
   do
    -- sanity check / assertion
    cnt = cnt + 1
-   if cnt > 100 then die("✽⬆️🐱⌂") end
+   assert(cnt < 100)
    
    ˇ:compute(r)
   end
@@ -706,6 +814,11 @@ function collide_guy(g)
  end
  for _i,b in ipairs(boxes) do
   doit(b)
+ end
+ 
+ -- dont sink below floor >_>
+ if █.y + █.h > floor.y then
+  █.y = floor.y - █.h
  end
  
  g.x = █.x - g.who.box.x
@@ -754,7 +867,7 @@ function collide_boxes()
 	  for _i,b2 in ipairs(boxes) do
 	   if b2.state ~= box_sm.dead then
 		   local h = hash(b1.id, b2.id)
-		   if not done[h] then
+		   if b1.id ~= b2.id and not done[h] then
 		    done[h] = true
 		    
 		    if overlap(b1, b2) then
@@ -782,12 +895,13 @@ function collide_boxes()
  
  for _i,b1 in ipairs(boxes) do
   if b1.state ~= box_sm.dead then
-	  for _i,r in ipairs(collision_rects) do
-	   if overlap(b1, r) then
-	    local bump = compute_bump(b1, r)
-	    b1.x += bump.x
-	    b1.y += bump.y
-	   end
+	  if b1.x + b1.w > floor.w then
+	   b1.x = floor.w - b1.w
+	  elseif b1.x < 0 then
+	   b1.x = 0
+   end
+   if b1.y + b1.h > floor.y then
+    b1.y = floor.y - b1.h
 	  end
   end
  end
@@ -796,22 +910,22 @@ end
 -->8
 -- the world
 
-local floor = {
+floor = {
  x=0,  y=100,
  w=8*21,h=28
 }
 
 collision_rects = {
  { -- left boundary
-  x=-1000,y=-500,
-  w=1000, h=1000
+  x=-100,y=-200,
+  w=100, h=1000
  },
  { -- right boundary
-  x=floor.w,y=-500,
-  w=1000,h=1000
+  x=floor.w,y=-200,
+  w=100,h=1000
  },
  { -- ceiling
-   x=0,y=-128,
+   x=0,y=-228,
    w=floor.w,h=64
  },
 
@@ -876,7 +990,8 @@ function draw_world()
   print(m, 3, floor.y + i * 6, 0)
  end
  local leftover_gpio = addr_ptr - gpio
- print(tostr(leftover_gpio), 30, floor.y + 6, 0)
+ print(tostr(leftover_gpio), 120, floor.y + 6, 0)
+ print(stat_result, 120, floor.y + 12, 0)
 end
 
 -->8
@@ -945,6 +1060,7 @@ function charsel_draw()
  local ngo = @net.go
  
  cls(3)
+ camera(0, 0)
 
  local base_x = 20
  local base_y = 32

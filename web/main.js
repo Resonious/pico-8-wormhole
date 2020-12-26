@@ -428,6 +428,9 @@ const connected = () => {
   if (window.pico8_gpio[127] == 0) {
     fullSync = true;
   }
+  // and show game of course lol
+  window.pico8_gpio[126] = 0
+  showgame()
 
   location.hash = ''
 }
@@ -466,9 +469,9 @@ const hashchange = e => {
 
 const codechange = e => {
   if (document.getElementById('magiccode').value === '') {
-    document.getElementById('dial').value = 'HOST'
+    document.getElementById('dial').value = 'Host'
   } else {
-    document.getElementById('dial').value = 'JOIN'
+    document.getElementById('dial').value = 'Join'
   }
 }
 
@@ -575,6 +578,11 @@ const wasmready = async () => {
   }
 }
 
+const showgame = () => {
+  const p8frame = document.getElementById('p8_frame_0')
+  p8frame.classList.add('ready')
+}
+
 (async () => {
   // Detect Browser Quirks.
   browserhacks()
@@ -606,6 +614,16 @@ const wasmready = async () => {
   codechange() // User might have typed something while we were loading.
   document.getElementById('dial').disabled = false
 
+  // NIGEL ...
+  const oneplr = document.getElementById('oneplr');
+  oneplr.addEventListener('click', () => {
+    window.pico8_gpio[126] = 1
+    const form = document.getElementsByTagName('form')[0]
+    form.classList.add('oneplr')
+    showgame()
+  })
+
+  // Autoconnect
   if (!hacks.noautoconnect && document.getElementById('magiccode').value !== '') {
     connect()
   }

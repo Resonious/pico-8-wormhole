@@ -5,14 +5,42 @@
   window.pico8_gpio = new Uint8Array(128);
 </script>
 
-<h1>Proof of concept: networked pico-8</h1>
+<style>
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-evenly;
+}
 
-<form id="dialog" role="main">
-  <p id="info">Let's see how this goes...</p>
-  <img id="qr">
-  <div style='margin-top: 1em'>
-    <input type="submit" id="dial" class="button" value="LOADING..." disabled>
-    <input type="text" id="magiccode" autocomplete="off" autofocus title="JOIN CODE" placeholder="GOT A CODE? TYPE HERE">
-    <span id="autocomplete">&nbsp;</span>
-  </div>
-</form>
+#content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
+#p8_frame_0:not(.ready) {
+  opacity: 0;
+  display: none;
+}
+
+form.oneplr {
+  display: none;
+}
+</style>
+
+<div id='content'>
+  <h1>Boys</h1>
+
+  <form id="dialog" role="main">
+    <p id="info">There's no point to this and it's quite buggy. Please enjoy.</p>
+    <img id="qr">
+    <div style='margin-top: 1em'>
+      <button type="button" id="oneplr" class="button">Play alone</button>
+      <input type="submit" id="dial" class="button" value="LOADING..." disabled>
+      <input type="text" id="magiccode" autocomplete="off" autofocus title="JOIN CODE" placeholder="GOT A CODE? TYPE HERE">
+      <span id="autocomplete">&nbsp;</span>
+    </div>
+  </form>
+</div>
